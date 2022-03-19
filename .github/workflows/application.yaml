@@ -181,4 +181,4 @@ jobs:
         run: |
           IMAGE_TAG={{env.IMAGE_TAG}} APPLICATION_ENV=${{env.ENV}} yarn cdk:deploy ${{env.ENV}}-FrontendStack
         env:
-          ECR_REGISTRY: ${{stateps.login-ecr.outputs.registry}}
+          ECR_REGISTRY: ${{steps.login-ecr.outputs.registry}}
