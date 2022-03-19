@@ -34,14 +34,14 @@ jobs:
           github_token: ${{secrets.github_token}}
           reporter: github-pr-review
           workdir: ${{env.working-directory}}
-      - name: Coverage report with jest-coverage-report-action
-        uses: ArtiomTr/jest-coverage-report-action@v2
-        if: contains(github.event_name, 'pull_request')
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          package-manager: yarn
-          test-script: yarn jest
-          working-directory:  ${{env.working-directory}}
+      # - name: Coverage report with jest-coverage-report-action
+      #   uses: ArtiomTr/jest-coverage-report-action@v2
+      #   if: contains(github.event_name, 'pull_request')
+      #   with:
+      #     github-token: ${{secrets.GITHUB_TOKEN}}
+      #     package-manager: yarn
+      #     test-script: yarn jest
+      #     working-directory:  ${{env.working-directory}}
 
   build-test-and-push:
     runs-on: ubuntu-20.04
