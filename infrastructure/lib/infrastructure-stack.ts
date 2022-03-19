@@ -35,7 +35,7 @@ export class InfrastructureStack extends cdk.Stack {
             {
               Effect: 'Allow',
               Action: ['kms:Decrypt'],
-              Resouce: `arn:aws:kms:${region}:${accountId}:key/*`
+              Resource: `arn:aws:kms:${region}:${accountId}:key/*`
             }
           ]
         })
