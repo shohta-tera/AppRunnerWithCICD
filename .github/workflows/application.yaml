@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  create_resource:
+  test:
     runs-on: ubuntu-20.04
     env:
       working-directory: ./services/web-app
