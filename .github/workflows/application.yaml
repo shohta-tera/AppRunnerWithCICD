@@ -44,6 +44,7 @@ jobs:
           working-directory:  ${{env.working-directory}}
 
   build-test-and-push:
+    runs-on: ubuntu-20.04
     env:
       working-directory: ./services/web-app
       AWS_ROLE_ARN: ${{secrets.AWS_ROLE}}
