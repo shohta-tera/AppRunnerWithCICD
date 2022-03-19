@@ -66,12 +66,12 @@ jobs:
         run: yarn install
         working-directory:  ${{env.working-directory}}
       - name: Setup environment variables
-        run: echo "REPO_NAME=${GITHUB=REPOSITORY#*\/}" >> $GITHUB_ENV
+        run: echo "REPO_NAME=${GITHUB_REPOSITORY#*\/}" >> $GITHUB_ENV
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@master
         with:
           aws-region: ${{env.AWS_REGION}}
-          role-to-assume: ${{env.AWS_ROLE}}
+          role-to-assume: ${{env.AWS_ROLE_ARN}}
           role-session-name: ${{env.REPO_NAME}}-github-action
       - name: Login to Amazon ECR
         id: login-ecr
@@ -141,12 +141,12 @@ jobs:
         run: yarn install
         working-directory:  ${{env.working-directory}}
       - name: Setup environment variables
-        run: echo "REPO_NAME=${GITHUB=REPOSITORY#*\/}" >> $GITHUB_ENV
+        run: echo "REPO_NAME=${GITHUB_REPOSITORY#*\/}" >> $GITHUB_ENV
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@master
         with:
           aws-region: ${{env.AWS_REGION}}
-          role-to-assume: ${{env.AWS_ROLE}}
+          role-to-assume: ${{env.AWS_ROLE_ARN}}
           role-session-name: ${{env.REPO_NAME}}-github-action
       - name: Create Image tag
         run: |
