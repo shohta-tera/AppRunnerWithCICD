@@ -10,7 +10,7 @@
     "test": "jest",
     "cdk:deploy": "cdk deploy --require-approval never",
     "cdk:diff": "cdk diff",
-    "cdk:bootstarp": "cdk bootstrap",
+    "cdk:bootstrap": "cdk bootstrap",
     "cdk:destroy": "cdk destory --force"
   },
   "devDependencies": {
