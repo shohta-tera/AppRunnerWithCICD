@@ -104,4 +104,4 @@ dist
 .tern-port
 
 # infra
-./infrastructure/cdk.out/
+infrastructure/cdk.out/
