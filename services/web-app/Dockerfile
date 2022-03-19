@@ -3,7 +3,7 @@ FROM node:16-slim AS base
 WORKDIR /app
 
 COPY package.json yarn.lock ./
-RUN yarn --frozen-lockfile --newtwork-timeout 600000
+RUN yarn install --frozen-lockfile --newtwork-timeout 600000
 COPY . .
 
 # Package install Layer

@@ -26,17 +26,18 @@ export class InfrastructureStack extends cdk.Stack {
       inlinePolicies: {
         inlinePolicies: iam.PolicyDocument.fromJson({
           Version: '2012-10-17',
-          Statement: [{
-            Effect: 'Allow',
-            Action: ['ssm:GetParameter*'],
-            Resource: `arn:aws:ssm${region}:${accountId}:parameter/*`
-          },
-          {
-            Effect: 'Allow',
-            Action: ['kms:Decrypt'],
-            Resouce: `arn:aws:kms:${region}:${accountId}:key/*`
-          }
-        ]
+          Statement: [
+            {
+              Effect: 'Allow',
+              Action: ['ssm:GetParameter*'],
+              Resource: `arn:aws:ssm:${region}:${accountId}:parameter/*`
+            },
+            {
+              Effect: 'Allow',
+              Action: ['kms:Decrypt'],
+              Resouce: `arn:aws:kms:${region}:${accountId}:key/*`
+            }
+          ]
         })
       }
     })
