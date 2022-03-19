@@ -7,7 +7,7 @@ import { ApplicationStack } from '../lib/application-stack';
 
 const app = new cdk.App();
 const systemEnv = process.env.APPLICATION_ENV ?? 'dev'
-new ContainerRegistryStack(app, 'ContainerRestryStack')
+new ContainerRegistryStack(app, 'ContainerRegistryStack')
 const appName = `${systemEnv}-FrontendStack`
 const infraName = `${systemEnv}-InfrastructureStack`
 new InfrastructureStack(app, infraName);
