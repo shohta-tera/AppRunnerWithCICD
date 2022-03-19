@@ -1,0 +1,183 @@
+name: Execute test and deploy application
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  create_resource:
+    runs-on: ubuntu-20.04
+    env:
+      working-directory: ./services/web-app
+      NODE_OPTIONS: --max_old_space_size=4096
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "16.x"
+          cache: "yarn"
+          cache-dependency-path: ${{env.working-directory}}/yarn.lock
+      - name: Setup dependencies
+        run: yarn install
+        working-directory:  ${{env.working-directory}}
+      - name: Eslint with review-dog
+        uses: reviewdog/action-eslint@v1
+        with:
+          github_token: ${{secrets.github_token}}
+          reporter: github-pr-review
+          workdir: ${{env.working-directory}}
+      - name: Coverage report with jest-coverage-report-action
+        uses: ArtiomTr/jest-coverage-report-action@v2
+        if: contains(github.event=name, 'pull_request')
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          package-manager: yarn
+          test-script: yarn jest
+          working-directory:  ${{env.working-directory}}
+
+  build-test-and-push:
+    env:
+      working-directory: ./services/web-app
+      AWS_ROLE_ARN: ${{secrets.AWS_ROLE}}
+      AWS_REGION: ap-northeast-1
+      ECR_REPOSITORY: ${{secrets.AWS_ECR_REPO_NAME}}
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "16.x"
+          cache: "yarn"
+          cache-dependency-path: ${{env.working-directory}}/yarn.lock
+      - name: Setup dependencies
+        run: yarn install
+        working-directory:  ${{env.working-directory}}
+      - name: Setup environment variables
+        run: echo "REPO_NAME=${GITHUB=REPOSITORY#*\/}" >> $GITHUB_ENV
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-region: ${{env.AWS_REGION}}
+          role-to-assume: ${{env.AWS_ROLE}}
+          role-session-name: ${{env.REPO_NAME}}-github-action
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Create Image tag
+        run: |
+          if [ "${{github.event_name}}" == "push" -a "${{github.ref}}" == "refs/heads/main" ]; then
+            TAG=prod
+            echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+          elif [ "${{github.event_name}}" == "push" -a "${{github.ref}}" == "refs/heads/develop" ]; then
+            TAG=stage
+            echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+          else
+            TAG=$(echo ${{github.head_ref}} | sed -e "s#feature/##g" -e "s#bugfix/##g" -e "s#hotfix/##g" -e "/dependabot/s/.*/dependabot/")
+            echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+          fi
+      - name: Build and tag container image
+        working-directory:  ${{env.working-directory}}
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry}}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            --build-arg AWS_REGION="$AWS_REGION"
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ steps.login-ecr.outputs.registry }}/${{env.ECR_REPOSITORY}}:${{env.IMAGE_TAG}}"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os, library"
+          severity: "CRITICAL"
+      - name: Run Dockle vulunerbility scanner
+        uses: hands-lab/dockle-action@v1
+        with:
+          image: "${{ steps.login-ecr.outputs.registry }}/${{env.ECR_REPOSITORY}}:${{env.IMAGE_TAG}}"
+          exit-code: "1"
+          exit-level: WARN
+      - name: Push container image to Amazon ECR
+        working-directory:  ${{env.working-directory}}
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry}}
+        run: docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+  deploy:
+    runs-on: ubuntu-20.04
+    needs: [test, build-test-and-push]
+    env:
+      working-directory: ./infrastructure
+      AWS_ROLE_ARN: ${{secrets.AWS_ROLE}}
+      AWS_REGION: ap-northeast-1
+      ECR_REPOSITORY: ${{secrets.AWS_ECR_REPO_NAME}}
+      ENV: ${{github.event_name == 'push' && github.ref == 'refs/heads/main' && 'prod' || github.event_name == 'push' && github.ref == 'refs/heads/develop' && 'stage' || 'dev'}}
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "16.x"
+          cache: "yarn"
+          cache-dependency-path: ${{env.working-directory}}/yarn.lock
+      - name: Setup dependencies
+        run: yarn install
+        working-directory:  ${{env.working-directory}}
+      - name: Setup environment variables
+        run: echo "REPO_NAME=${GITHUB=REPOSITORY#*\/}" >> $GITHUB_ENV
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-region: ${{env.AWS_REGION}}
+          role-to-assume: ${{env.AWS_ROLE}}
+          role-session-name: ${{env.REPO_NAME}}-github-action
+      - name: Create Image tag
+        run: |
+          if [ "${{github.event_name}}" == "push" -a "${{github.ref}}" == "refs/heads/main" ]; then
+            TAG=prod
+            echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+          elif [ "${{github.event_name}}" == "push" -a "${{github.ref}}" == "refs/heads/develop" ]; then
+            TAG=stage
+            echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+          else
+            TAG=$(echo ${{github.head_ref}} | sed -e "s#feature/##g" -e "s#bugfix/##g" -e "s#hotfix/##g" -e "/dependabot/s/.*/dependabot/")
+            echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+          fi
+      - name: Build
+        run: yarn build
+        working-directory: ${{env.working-directory}}
+      - run: sleep 300
+      - name: CDK diff check for infra stack
+        working-directory: ${{env.working-directory}}
+        run: |
+          APPLICATION_ENV=${{env.ENV}} yarn cdk:diff ${{env.ENV}}-InfrastructureStack
+      - name: Deploy infra stack
+        working-directory: ${{env.working-directory}}
+        run: |
+          APPLICATION_ENV=${{env.ENV}} yarn cdk:deploy ${{env.ENV}}-InfrastructureStack
+      - name: CDK diff check for Frontend
+        working-directory: ${{env.working-directory}}
+        run: |
+          APPLICATION_ENV=${{env.ENV}} yarn cdk:diff ${{env.ENV}}-FrontendStack
+      - name: Deploy Frontend stack
+        working-directory: ${{env.working-directory}}
+        run: |
+          IMAGE_TAG={{env.IMAGE_TAG}} APPLICATION_ENV=${{env.ENV}} yarn cdk:deploy ${{env.ENV}}-FrontendStack
+        env:
+          ECR_REGISTRY: ${{stateps.login-ecr.outputs.registry}}

@@ -1,0 +1,51 @@
+name: Create base infrastructure
+
+on:
+  push:
+    paths:
+      - "infrastructure/lib/infrastructure-stack.ts"
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  create_resource:
+    runs-on: ubuntu-20.04
+    env:
+      working-directory: ./infrastructure
+      AWS_ROLE_ARN: ${{secrets.AWS_ROLE}}
+      AWS_REGION: ap-northeast-1
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "16.x"
+          cache: "yarn"
+          cache-dependency-path: ${{env.working-directory}}/yarn.lock
+      - name: Setup dependencies
+        run: yarn install
+        working-directory:  ${{env.working-directory}}
+      - name: Setup environment variables
+        run: echo "REPO_NAME=${GITHUB=REPOSITORY#*\/}" >> $GITHUB_ENV
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-region: ${{env.AWS_REGION}}
+          role-to-assume: ${{env.AWS_ROLE}}
+          role-session-name: ${{env.REPO_NAME}}-github-action
+      - name: Build
+        run: yarn build
+        working-directory:  ${{env.working-directory}}
+      - name: Bootstrap
+        run: yarn cdk:bootstrap
+        working-directory:  ${{env.working-directory}}
+      - name: CDK diff check for ECR
+        run: yarn cdk:diff ContainerRegistryStack
+      - name: Deploy ECR
+        run: yarn cdk:deploy ContainerRegistryStack
