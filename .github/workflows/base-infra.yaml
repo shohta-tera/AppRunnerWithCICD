@@ -3,7 +3,7 @@ name: Create base infrastructure
 on:
   push:
     paths:
-      - "infrastructure/lib/infrastructure-stack.ts"
+      - "infrastructure/lib/*"
     branches:
       - main
       - develop
