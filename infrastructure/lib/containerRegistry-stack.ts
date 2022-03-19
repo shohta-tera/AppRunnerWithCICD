@@ -25,7 +25,7 @@ export class ContainerRegistryStack extends cdk.Stack {
         rules: [replicationRuleProperty]
       }
     })
-    new StringParameter(this, 'RepositoryParatmeter' {
+    new StringParameter(this, 'RepositoryParatmeter', {
       description: 'Repo name for frontend',
       parameterName: '/west/ECRRepositoryName',
       stringValue: repository.repositoryUri,
