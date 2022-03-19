@@ -47,5 +47,7 @@ jobs:
         working-directory:  ${{env.working-directory}}
       - name: CDK diff check for ECR
         run: yarn cdk:diff ContainerRegistryStack
+        working-directory:  ${{env.working-directory}}
       - name: Deploy ECR
         run: yarn cdk:deploy ContainerRegistryStack
+        working-directory:  ${{env.working-directory}}
