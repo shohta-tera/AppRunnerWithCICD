@@ -20,7 +20,7 @@ export class ApplicationStack extends cdk.Stack {
     new apprunner.CfnService(this, 'test-application', {
       sourceConfiguration: {
         authenticationConfiguration: {
-          accessRoleArn: `arn:aws:iam::${accountId}:role/service-role/${systemEnv}-ApprunnerECRAccessRole`
+          accessRoleArn: `arn:aws:iam::${accountId}:role/service-role/${systemEnv}-AppRunnerECRAccessRole`
         },
         autoDeploymentsEnabled: true,
         imageRepository: {
