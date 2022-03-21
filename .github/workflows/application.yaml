@@ -148,6 +148,9 @@ jobs:
           aws-region: ${{env.AWS_REGION}}
           role-to-assume: ${{env.AWS_ROLE_ARN}}
           role-session-name: ${{env.REPO_NAME}}-github-action
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
       - name: Create Image tag
         run: |
           if [ "${{github.event_name}}" == "push" -a "${{github.ref}}" == "refs/heads/main" ]; then
@@ -179,6 +182,6 @@ jobs:
       - name: Deploy Frontend stack
         working-directory: ${{env.working-directory}}
         run: |
-          IMAGE_TAG={{env.IMAGE_TAG}} APPLICATION_ENV=${{env.ENV}} yarn cdk:deploy ${{env.ENV}}-FrontendStack
+          IMAGE_TAG=${{env.IMAGE_TAG}} APPLICATION_ENV=${{env.ENV}} yarn cdk:deploy ${{env.ENV}}-FrontendStack
         env:
           ECR_REGISTRY: ${{steps.login-ecr.outputs.registry}}
