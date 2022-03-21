@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  create_resource:
+  test:
     runs-on: ubuntu-20.04
     env:
       working-directory: ./services/web-app
@@ -34,16 +34,17 @@ jobs:
           github_token: ${{secrets.github_token}}
           reporter: github-pr-review
           workdir: ${{env.working-directory}}
-      - name: Coverage report with jest-coverage-report-action
-        uses: ArtiomTr/jest-coverage-report-action@v2
-        if: contains(github.event=name, 'pull_request')
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          package-manager: yarn
-          test-script: yarn jest
-          working-directory:  ${{env.working-directory}}
+      # - name: Coverage report with jest-coverage-report-action
+      #   uses: ArtiomTr/jest-coverage-report-action@v2
+      #   if: contains(github.event_name, 'pull_request')
+      #   with:
+      #     github-token: ${{secrets.GITHUB_TOKEN}}
+      #     package-manager: yarn
+      #     test-script: yarn jest
+      #     working-directory:  ${{env.working-directory}}
 
   build-test-and-push:
+    runs-on: ubuntu-20.04
     env:
       working-directory: ./services/web-app
       AWS_ROLE_ARN: ${{secrets.AWS_ROLE}}
@@ -65,12 +66,12 @@ jobs:
         run: yarn install
         working-directory:  ${{env.working-directory}}
       - name: Setup environment variables
-        run: echo "REPO_NAME=${GITHUB=REPOSITORY#*\/}" >> $GITHUB_ENV
+        run: echo "REPO_NAME=${GITHUB_REPOSITORY#*\/}" >> $GITHUB_ENV
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@master
         with:
           aws-region: ${{env.AWS_REGION}}
-          role-to-assume: ${{env.AWS_ROLE}}
+          role-to-assume: ${{env.AWS_ROLE_ARN}}
           role-session-name: ${{env.REPO_NAME}}-github-action
       - name: Login to Amazon ECR
         id: login-ecr
@@ -93,7 +94,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry}}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-            --build-arg AWS_REGION="$AWS_REGION"
+            --build-arg AWS_REGION="$AWS_REGION" .
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -140,13 +141,16 @@ jobs:
         run: yarn install
         working-directory:  ${{env.working-directory}}
       - name: Setup environment variables
-        run: echo "REPO_NAME=${GITHUB=REPOSITORY#*\/}" >> $GITHUB_ENV
+        run: echo "REPO_NAME=${GITHUB_REPOSITORY#*\/}" >> $GITHUB_ENV
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@master
         with:
           aws-region: ${{env.AWS_REGION}}
-          role-to-assume: ${{env.AWS_ROLE}}
+          role-to-assume: ${{env.AWS_ROLE_ARN}}
           role-session-name: ${{env.REPO_NAME}}-github-action
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
       - name: Create Image tag
         run: |
           if [ "${{github.event_name}}" == "push" -a "${{github.ref}}" == "refs/heads/main" ]; then
@@ -178,6 +182,6 @@ jobs:
       - name: Deploy Frontend stack
         working-directory: ${{env.working-directory}}
         run: |
-          IMAGE_TAG={{env.IMAGE_TAG}} APPLICATION_ENV=${{env.ENV}} yarn cdk:deploy ${{env.ENV}}-FrontendStack
+          IMAGE_TAG=${{env.IMAGE_TAG}} APPLICATION_ENV=${{env.ENV}} yarn cdk:deploy ${{env.ENV}}-FrontendStack
         env:
-          ECR_REGISTRY: ${{stateps.login-ecr.outputs.registry}}
+          ECR_REGISTRY: ${{steps.login-ecr.outputs.registry}}

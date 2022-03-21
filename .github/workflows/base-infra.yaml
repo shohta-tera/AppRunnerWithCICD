@@ -3,7 +3,7 @@ name: Create base infrastructure
 on:
   push:
     paths:
-      - "infrastructure/lib/infrastructure-stack.ts"
+      - "infrastructure/lib/*"
     branches:
       - main
       - develop
@@ -32,12 +32,12 @@ jobs:
         run: yarn install
         working-directory:  ${{env.working-directory}}
       - name: Setup environment variables
-        run: echo "REPO_NAME=${GITHUB=REPOSITORY#*\/}" >> $GITHUB_ENV
+        run: echo "REPO_NAME=${GITHUB_REPOSITORY#*\/}" >> $GITHUB_ENV
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@master
         with:
           aws-region: ${{env.AWS_REGION}}
-          role-to-assume: ${{env.AWS_ROLE}}
+          role-to-assume: ${{env.AWS_ROLE_ARN}}
           role-session-name: ${{env.REPO_NAME}}-github-action
       - name: Build
         run: yarn build
@@ -47,5 +47,7 @@ jobs:
         working-directory:  ${{env.working-directory}}
       - name: CDK diff check for ECR
         run: yarn cdk:diff ContainerRegistryStack
+        working-directory:  ${{env.working-directory}}
       - name: Deploy ECR
         run: yarn cdk:deploy ContainerRegistryStack
+        working-directory:  ${{env.working-directory}}
