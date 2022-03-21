@@ -35,7 +35,7 @@ export class ApplicationStack extends cdk.Stack {
       instanceConfiguration: {
         cpu: '1024',
         memory: '2048',
-        instanceRoleArn: `arn:aws:iam::${{ accountId }}:role/${systemEnv}-AppRunnerRole`
+        instanceRoleArn: `arn:aws:iam::${accountId}:role/${systemEnv}-AppRunnerRole`
       },
       serviceName: serviceName
     })
